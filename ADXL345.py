@@ -1,11 +1,12 @@
 import spidev
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+import RPi.GPIO as GPIO
 
 class adxl345:
 
 	
-	def __init__(self):
+	def __init__(self, int_pin = 17):
 		self.spi = spidev.SpiDev()
 		self.spi.open(0,0)
 		self.spi.mode = 3
@@ -22,18 +23,29 @@ class adxl345:
 		self.DATAX0 = 0x32
 		self.FIFO_CTL = 0x38
 		self.FIFO_STATUS =0x39
+		self.INT_ENABLE = 0x2E
+		self.INT_MAP = 0x2F
+		self.INT_SOURCE = 0x30
 		
 		self.write_register(self.POWER_CTL, 0x08) # start measuring 
 		self.write_register(self.BW_RATE, 0x0F) #set the sampling rate to max(3.2k hz)
 		self.write_register(self.FIFO_CTL, 0x80) #enable fifo stream mode
 		self.write_register(self.DATA_FORMAT, 0x08) #full resolution mode
 		
+		#configure Interrupt PIN
+		self.int_pin = int_pin
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setup(self.int_pin, GPIO.IN)
+		
+		#Enable 'Data_ready' event interrupt on INT1
+		self.write_register(self.INT_ENABLE, 0x80)
+		self.write_register(self.INT_MAP, 0x00)
+		
+		self.fifo_buffer = []
 	
 	def write_register(self, register, value):
 		#0x7F ensures 'write' mode
 		self.spi.xfer2([register & 0x7F, value])
-	
-
 	
 	def read_register_single(self, register):
 		cmd = 0x80 | register #0x80 ensures read and single byte sampling mode
@@ -47,28 +59,44 @@ class adxl345:
 		
 		#returns bytes without the first(dummy) byte
 		return resp[1:]
+		
 	def to_signed(self,val):
 		if val & 0x8000:
 			return val - 65536
 		return val
-
-	def measure(self):
-		fifo_status = self.read_register_single(self.FIFO_STATUS) & 0x3F
-		timestamp = time.time()
-		data = self.read_register_multi(self.DATAX0,6)
-		#shift high byte to left and combine with low byte
-		x = self.to_signed(data[1] << 8 | data[0]) *0.0039
-		y = self.to_signed(data[3] << 8 | data[2]) *0.0039
-		z = self.to_signed(data[5] << 8 | data[4]) *0.0039
+	
+	def fill_buffer(self):
+		fifo_entries = self.read_register_single(self.FIFO_STATUS) & 0x3F
+		if fifo_entries == 0:
+			return 
+			
+		#t_now = datetime.now()
+		#timestamps = [t_now - timedelta(seconds=(fifo_entries -i-1)*self.dt) for i in range(fifo_entries)]
 		
-		time.sleep(self.dt)
-		return {
-			'timestamp': timestamp,
+		for _ in range(fifo_entries):
+			raw = self.read_register_multi(self.DATAX0, 6)
+			x = self.to_signed(raw[1] << 8 | raw[0]) *0.0039
+			y = self.to_signed(raw[3] << 8 | raw[2]) *0.0039
+			z = self.to_signed(raw[5] << 8 | raw[4]) *0.0039
+			self.fifo_buffer.append({
+			'timestamp': time.time(),
 			'x': x,
 			'y': y,
 			'z': z,
-			}
+			})
+			
+	def read_fifo(self):
+		while GPIO.input(self.int_pin) == 0:
+			time.sleep(0.00001)
+		if not self.fifo_buffer:
+			self.fill_buffer()
+		if self.fifo_buffer:
+				return self.fifo_buffer.pop(0)
+		else:
+			return None
 
+
+			
 
 
 
