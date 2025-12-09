@@ -30,7 +30,7 @@ class adxl345:
 		self.write_register(self.POWER_CTL, 0x08) # start measuring 
 		self.write_register(self.BW_RATE, 0x0F) #set the sampling rate to max(3.2k hz)
 		self.write_register(self.FIFO_CTL, 0x80) #enable fifo stream mode
-		self.write_register(self.DATA_FORMAT, 0x08) #full resolution mode
+		self.write_register(self.DATA_FORMAT, 0x09) #full resolution mode
 		
 		#configure Interrupt PIN
 		self.int_pin = int_pin
@@ -79,7 +79,7 @@ class adxl345:
 			y = self.to_signed(raw[3] << 8 | raw[2]) *0.0039
 			z = self.to_signed(raw[5] << 8 | raw[4]) *0.0039
 			self.fifo_buffer.append({
-			'timestamp': time.time(),
+			'time': time.time(),
 			'x': x,
 			'y': y,
 			'z': z,
