@@ -12,6 +12,6 @@
 #Instruction
 1. Clone the respository
 2. Create Virtual Environment and Install dependencies
-   pip install -r Requirements.txt
+   >pip install -r Requirements.txt
 3. Open Jupyter Notebook
-   jupyter notebook
+   >jupyter notebook
