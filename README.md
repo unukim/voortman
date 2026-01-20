@@ -1,13 +1,13 @@
 # Folder Structure(for now)
-- Model_data/ #Raw data collected from ADXL345 on 16th Jan
+- Model_data/ :Raw data collected from ADXL345 on 16th Jan
   ## Sensor Configuration and Data Collection
-- ADXL345.py #Sensor communication protocol
-- Database.py #Creates connection between postgreSQL server and RPI
+- ADXL345.py :Sensor communication protocol
+- Database.py :Creates connection between postgreSQL server and RPI
 - main.py 
 
   ## Analysis
--  Signal Processing.ipynb #Time-, Frequency-Domain feature analysis including envelope spectrum
--  Spectrogram_ML #CNN model trained on T-F spectrogram of'Model_data'
+-  Signal Processing.ipynb :Time-, Frequency-Domain feature analysis including envelope spectrum
+-  Spectrogram_ML :CNN model trained on T-F spectrogram of'Model_data'
 
 # Model Training
 1. The first cell in **Signal Processing.ipynb** generates the vibration spectrogram
